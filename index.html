@@ -70,17 +70,40 @@
       try {
         scanner = scanner || new Html5Qrcode('reader');
 
-        await scanner.start(
-          { facingMode: { ideal: 'environment' } },
-          {
-            fps: 12,
-            qrbox: function(w, h) {
-              const s = Math.floor(Math.min(w, h) * 0.72);
-              return { width: s, height: s };
-            },
-            aspectRatio: 1.0,
-            disableFlip: false
+        const scanConfig = {
+          fps: 12,
+          qrbox: function(w, h) {
+            const s = Math.floor(Math.min(w, h) * 0.72);
+            return { width: s, height: s };
           },
+          aspectRatio: 1.0,
+          disableFlip: false
+        };
+
+        // html5-qrcode 2.3.8 ไม่รองรับ { ideal: 'environment' }
+        // จึงเลือกกล้องหลังด้วย cameraId ก่อน และ fallback เป็น facingMode แบบ string
+        let cameraConfig = null;
+
+        try {
+          const cameras = await Html5Qrcode.getCameras();
+          if (Array.isArray(cameras) && cameras.length) {
+            const backCamera = cameras.find(function(cam) {
+              return /back|rear|environment|หลัง/i.test(String(cam.label || ''));
+            }) || (cameras.length > 1 ? cameras[cameras.length - 1] : cameras[0]);
+
+            cameraConfig = backCamera.id;
+          }
+        } catch (cameraListError) {
+          // หากอ่านรายการกล้องไม่ได้ ให้ใช้ facingMode ด้านล่าง
+        }
+
+        if (!cameraConfig) {
+          cameraConfig = { facingMode: 'environment' };
+        }
+
+        await scanner.start(
+          cameraConfig,
+          scanConfig,
           onScanSuccess,
           function () {}
         );
