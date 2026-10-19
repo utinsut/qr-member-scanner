@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <title>สแกน QR สมาชิก</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#0b1220; color:#fff; }
+    .wrap { width:100%; max-width:720px; margin:0 auto; padding:18px 14px 30px; }
+    h1 { font-size:24px; text-align:center; margin:8px 0 6px; }
+    .sub { text-align:center; color:#cbd5e1; margin-bottom:16px; }
+    #reader { width:100%; min-height:320px; overflow:hidden; border-radius:18px; background:#111827; }
+    .status { margin:14px 0; padding:12px 14px; border-radius:12px; background:#172033; color:#e5e7eb; line-height:1.5; }
+    .status.ok { background:#0f5132; }
+    .status.err { background:#842029; }
+    button { width:100%; min-height:52px; border:0; border-radius:12px; font-size:18px; font-weight:700; padding:12px 16px; background:#0d6efd; color:#fff; }
+    button:disabled { opacity:.55; }
+    .small { margin-top:12px; color:#94a3b8; font-size:13px; line-height:1.55; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>สแกน QR สมาชิก</h1>
+    <div class="sub">กล้องหลังจะเริ่มทำงานอัตโนมัติ</div>
+    <div id="reader"></div>
+    <div id="status" class="status">กำลังขออนุญาตเปิดกล้อง…</div>
+    <button id="retryBtn" type="button" onclick="startCamera()" style="display:none;">เปิดกล้องอีกครั้ง</button>
+    <div class="small">ครั้งแรก Safari จะถามสิทธิ์กล้อง ให้เลือก “อนุญาต” หากเปิดจาก LINE/Facebook ให้เลือก “เปิดใน Safari”</div>
+  </div>
+
+  <script>
+    // วิธีใช้:
+    // 1) โฮสต์ไฟล์นี้บน HTTPS ภายนอก Google Apps Script เช่น GitHub Pages / Netlify / Cloudflare Pages
+    // 2) เปิด URL แบบ: scanner.html?return=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2F...%2Fexec
+    // เมื่อสแกนสำเร็จ จะกลับไปที่ Web App เป็น .../exec?member=OY001
+
+    const params = new URLSearchParams(location.search);
+    const RETURN_URL = (params.get('return') || '').trim();
+
+    let scanner = null;
+    let running = false;
+    let locked = false;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      // หน่วงสั้น ๆ ให้ Safari สร้างหน้าเสร็จก่อนเรียกกล้อง
+      setTimeout(startCamera, 350);
+    });
+
+    async function startCamera() {
+      if (running || locked) return;
+
+      const status = document.getElementById('status');
+      const retryBtn = document.getElementById('retryBtn');
+      retryBtn.style.display = 'none';
+      status.className = 'status';
+      status.textContent = 'กำลังเปิดกล้องหลัง…';
+
+      if (!window.isSecureContext) {
+        showError('หน้านี้ต้องเปิดผ่าน HTTPS เท่านั้น');
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showError('เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง กรุณาเปิดด้วย Safari รุ่นปัจจุบัน');
+        return;
+      }
+
+      try {
+        scanner = scanner || new Html5Qrcode('reader');
+
+        await scanner.start(
+          { facingMode: { ideal: 'environment' } },
+          {
+            fps: 12,
+            qrbox: function(w, h) {
+              const s = Math.floor(Math.min(w, h) * 0.72);
+              return { width: s, height: s };
+            },
+            aspectRatio: 1.0,
+            disableFlip: false
+          },
+          onScanSuccess,
+          function () {}
+        );
+
+        running = true;
+        locked = false;
+        status.className = 'status ok';
+        status.textContent = 'พร้อมสแกน — หันกล้องไปที่ QR Code บนบัตรสมาชิก';
+      } catch (err) {
+        showError(cameraErrorText(err));
+      }
+    }
+
+    async function onScanSuccess(decodedText) {
+      if (locked) return;
+      locked = true;
+
+      const memberCode = extractMemberCode(decodedText);
+      if (!memberCode) {
+        locked = false;
+        showError('อ่าน QR ได้ แต่ไม่พบรหัสสมาชิก เช่น OY001 หรือ LT001');
+        return;
+      }
+
+      document.getElementById('status').className = 'status ok';
+      document.getElementById('status').textContent = 'พบ ' + memberCode + ' กำลังเปิดแบบฟอร์ม…';
+
+      try {
+        if (scanner && running) await scanner.stop();
+      } catch (e) {}
+      running = false;
+
+      if (!RETURN_URL) {
+        locked = false;
+        showError('ยังไม่ได้กำหนด URL ของ Web App ปลายทาง (?return=...)');
+        return;
+      }
+
+      const sep = RETURN_URL.indexOf('?') === -1 ? '?' : '&';
+      location.replace(RETURN_URL + sep + 'member=' + encodeURIComponent(memberCode));
+    }
+
+    function extractMemberCode(raw) {
+      const text = String(raw || '').trim();
+      if (!text) return '';
+
+      // QR รุ่นที่บรรจุ URL + ?member=OY001
+      try {
+        const u = new URL(text);
+        const m = (u.searchParams.get('member') || '').trim();
+        if (m) {
+          const found = m.toUpperCase().match(/(?:LT|OY)\s*0*\d+/);
+          if (found) return found[0].replace(/\s+/g, '');
+        }
+      } catch (e) {}
+
+      // QR/ข้อความที่มีรหัสอยู่โดยตรง
+      const match = text.toUpperCase().match(/(?:LT|OY)\s*0*\d+/);
+      return match ? match[0].replace(/\s+/g, '') : '';
+    }
+
+    function showError(message) {
+      const status = document.getElementById('status');
+      status.className = 'status err';
+      status.textContent = message;
+      document.getElementById('retryBtn').style.display = 'block';
+    }
+
+    function cameraErrorText(err) {
+      const name = err && err.name ? err.name : '';
+      const msg = err && err.message ? err.message : String(err || '');
+
+      if (/NotAllowedError|Permission|denied/i.test(name + ' ' + msg)) {
+        return 'Safari ยังไม่ได้รับสิทธิ์ใช้กล้อง หรือสิทธิ์ถูกปฏิเสธ กรุณาอนุญาต Camera แล้วกด “เปิดกล้องอีกครั้ง”';
+      }
+      if (/NotFoundError|DevicesNotFound/i.test(name + ' ' + msg)) {
+        return 'ไม่พบกล้องในอุปกรณ์';
+      }
+      if (/NotReadableError|TrackStartError/i.test(name + ' ' + msg)) {
+        return 'กล้องกำลังถูกใช้งานโดยแอปอื่น กรุณาปิดแอปกล้อง/วิดีโออื่นแล้วลองใหม่';
+      }
+      return 'เปิดกล้องไม่สำเร็จ: ' + (msg || name || 'ไม่ทราบสาเหตุ');
+    }
+  </script>
+</body>
+</html>
