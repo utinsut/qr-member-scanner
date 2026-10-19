@@ -14,9 +14,8 @@
     .sub{text-align:center;color:#cbd5e1;margin-bottom:14px;font-size:14px}
     .camera{position:relative;width:100%;min-height:320px;border-radius:20px;overflow:hidden;background:#111827;box-shadow:0 10px 30px rgba(0,0,0,.25)}
     video{display:block;width:100%;height:58vh;min-height:320px;max-height:620px;object-fit:cover;background:#111827}
-    .guide{position:absolute;left:7%;right:7%;top:50%;height:180px;transform:translateY(-50%);border:3px solid rgba(255,255,255,.92);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.12);pointer-events:none}
-    .guide:before,.guide:after{content:"";position:absolute;left:8%;right:8%;height:2px;background:#22c55e;box-shadow:0 0 12px #22c55e}
-    .guide:before{top:38%}.guide:after{top:62%;opacity:.45}
+    .guide{position:absolute;left:18%;right:18%;top:50%;height:auto;aspect-ratio:1/1;transform:translateY(-50%);border:3px solid rgba(255,255,255,.92);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.12);pointer-events:none}
+    .guide:before{content:"";position:absolute;left:12%;right:12%;top:50%;height:2px;background:#22c55e;box-shadow:0 0 12px #22c55e}
     .status{margin-top:14px;padding:13px 14px;border-radius:13px;background:#173022;color:#d7ffe2;line-height:1.55;font-size:15px}
     .status.error{background:#3b161b;color:#ffd7da}.status.ok{background:#12391f;color:#dcffe5}
     .buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
@@ -26,13 +25,13 @@
     .manual input{flex:1;min-width:0;min-height:50px;border:1px solid #475569;border-radius:12px;background:#fff;color:#111827;font-size:18px;padding:10px 12px;text-transform:uppercase}
     .manual button{background:#16a34a;color:#fff;min-width:95px}
     .hint{margin-top:12px;color:#94a3b8;font-size:13px;line-height:1.55}
-    @media(max-width:520px){.wrap{padding:12px 10px 26px}h1{font-size:23px}.camera{min-height:290px}video{height:56vh;min-height:290px}.guide{height:150px}.buttons{grid-template-columns:1fr}.manual{flex-direction:column}.manual button{width:100%}}
+    @media(max-width:520px){.wrap{padding:12px 10px 26px}h1{font-size:23px}.camera{min-height:290px}video{height:56vh;min-height:290px}.guide{left:16%;right:16%}.buttons{grid-template-columns:1fr}.manual{flex-direction:column}.manual button{width:100%}}
   </style>
 </head>
 <body>
 <div class="wrap">
   <h1>สแกนบัตรสมาชิก</h1>
-  <div class="sub">รองรับทั้ง QR Code และบาร์โค้ด 1 มิติบนบัตรสมาชิก</div>
+  <div class="sub">สแกน QR Code สมาชิกได้รวดเร็วและแม่นยำ</div>
 
   <div class="camera">
     <video id="video" playsinline muted></video>
@@ -51,7 +50,7 @@
     <button type="button" onclick="submitManual()">ค้นหา</button>
   </div>
 
-  <div class="hint">เวลาสแกนบาร์โค้ด ให้ถือกล้องนิ่งและให้แท่งบาร์โค้ดอยู่ภายในกรอบแนวนอน ถ้าบาร์โค้ดอยู่บนหน้าจอคอมพิวเตอร์ ให้เพิ่มความสว่างหน้าจอและหลีกเลี่ยงแสงสะท้อน</div>
+  <div class="hint">แนะนำให้ QR Code บนบัตรเก็บเฉพาะรหัสสมาชิก เช่น OY001 หรือ LT001 จะสแกนได้เร็ว และเปลี่ยน URL ของระบบภายหลังได้โดยไม่ต้องพิมพ์บัตรใหม่</div>
 </div>
 
 <script>
@@ -121,7 +120,7 @@
     }
 
     try {
-      reader = new ZXingBrowser.BrowserMultiFormatReader(undefined, {
+      reader = new ZXingBrowser.BrowserQRCodeReader(undefined, {
         delayBetweenScanAttempts: 120,
         delayBetweenScanSuccess: 700
       });
@@ -135,7 +134,7 @@
       });
 
       started = true;
-      setStatus('พร้อมสแกน — เล็งไปที่ QR Code หรือบาร์โค้ดบนบัตร', 'ok');
+      setStatus('พร้อมสแกน — เล็ง QR Code ให้อยู่ในกรอบ', 'ok');
     } catch (err) {
       started = false;
       controls = null;
