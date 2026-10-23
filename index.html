@@ -3,54 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
-  <meta name="theme-color" content="#0b1220">
-  <title>สแกนบัตรสมาชิก</title>
-  <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>สแกน QR สมาชิก</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <style>
     *{box-sizing:border-box}
-    html,body{margin:0;background:#0b1220;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif}
-    .wrap{max-width:720px;margin:0 auto;padding:18px 14px 34px}
-    h1{font-size:25px;text-align:center;margin:8px 0 4px}
-    .sub{text-align:center;color:#cbd5e1;margin-bottom:14px;font-size:14px}
-    .camera{position:relative;width:100%;min-height:320px;border-radius:20px;overflow:hidden;background:#111827;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    video{display:block;width:100%;height:58vh;min-height:320px;max-height:620px;object-fit:cover;background:#111827}
-    .guide{position:absolute;left:18%;right:18%;top:50%;height:auto;aspect-ratio:1/1;transform:translateY(-50%);border:3px solid rgba(255,255,255,.92);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.12);pointer-events:none}
-    .guide:before{content:"";position:absolute;left:12%;right:12%;top:50%;height:2px;background:#22c55e;box-shadow:0 0 12px #22c55e}
-    .status{margin-top:14px;padding:13px 14px;border-radius:13px;background:#173022;color:#d7ffe2;line-height:1.55;font-size:15px}
-    .status.error{background:#3b161b;color:#ffd7da}.status.ok{background:#12391f;color:#dcffe5}
-    .buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-    button{border:0;border-radius:12px;min-height:50px;font-size:16px;font-weight:700;padding:10px 12px}
-    .primary{background:#0d6efd;color:#fff}.secondary{background:#334155;color:#fff}
-    .manual{margin-top:14px;display:flex;gap:8px}
-    .manual input{flex:1;min-width:0;min-height:50px;border:1px solid #475569;border-radius:12px;background:#fff;color:#111827;font-size:18px;padding:10px 12px;text-transform:uppercase}
-    .manual button{background:#16a34a;color:#fff;min-width:95px}
-    .hint{margin-top:12px;color:#94a3b8;font-size:13px;line-height:1.55}
-    @media(max-width:520px){.wrap{padding:12px 10px 26px}h1{font-size:23px}.camera{min-height:290px}video{height:56vh;min-height:290px}.guide{left:16%;right:16%}.buttons{grid-template-columns:1fr}.manual{flex-direction:column}.manual button{width:100%}}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b1220;color:#fff}
+    .wrap{width:100%;max-width:720px;margin:0 auto;padding:14px 12px 28px}
+    h1{font-size:24px;text-align:center;margin:6px 0 4px}
+    .sub{text-align:center;color:#cbd5e1;margin-bottom:12px;font-size:14px}
+    .camera-box{position:relative;width:100%;min-height:360px;overflow:hidden;border-radius:18px;background:#111827}
+    #video{display:block;width:100%;height:62vh;min-height:360px;max-height:650px;object-fit:cover;background:#111827}
+    .frame{position:absolute;left:10%;top:16%;width:80%;aspect-ratio:1/1;border:3px solid rgba(255,255,255,.95);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.20);pointer-events:none}
+    .frame:before,.frame:after{content:"";position:absolute;left:8%;right:8%;top:50%;height:2px;background:#22c55e;box-shadow:0 0 12px #22c55e}
+    .status{margin:12px 0;padding:12px 14px;border-radius:12px;background:#172033;color:#e5e7eb;line-height:1.5;font-size:15px}
+    .status.ok{background:#0f5132}.status.err{background:#842029}.status.warn{background:#7c5a00}
+    button{width:100%;min-height:50px;border:0;border-radius:12px;font-size:17px;font-weight:700;padding:11px 14px;background:#0d6efd;color:#fff;margin-top:8px}
+    button.secondary{background:#475569}
+    .manual{display:flex;gap:8px;margin-top:12px}.manual input{flex:1;min-width:0;border:0;border-radius:10px;padding:12px;font-size:17px;text-transform:uppercase}.manual button{width:auto;margin:0;padding:10px 16px}
+    .small{margin-top:10px;color:#94a3b8;font-size:13px;line-height:1.5}
+    #canvas{display:none}
   </style>
 </head>
 <body>
 <div class="wrap">
   <h1>สแกนบัตรสมาชิก</h1>
-  <div class="sub">สแกน QR Code สมาชิกได้รวดเร็วและแม่นยำ</div>
+  <div class="sub">QR ต้องมีเพียงรหัสสมาชิก เช่น OY001 หรือ LT001</div>
 
-  <div class="camera">
-    <video id="video" playsinline muted></video>
-    <div class="guide"></div>
+  <div class="camera-box">
+    <video id="video" playsinline webkit-playsinline muted autoplay></video>
+    <div class="frame"></div>
   </div>
+  <canvas id="canvas"></canvas>
 
   <div id="status" class="status">กำลังเตรียมกล้อง…</div>
-
-  <div class="buttons">
-    <button class="primary" type="button" onclick="startScanner()">📷 เปิด/เริ่มกล้องใหม่</button>
-    <button class="secondary" type="button" onclick="stopScanner()">⏹ หยุดกล้อง</button>
-  </div>
+  <button id="retryBtn" type="button" onclick="startCamera()" style="display:none">📷 เปิด/เริ่มกล้องใหม่</button>
+  <button id="stopBtn" class="secondary" type="button" onclick="stopCamera()" style="display:none">⏹ หยุดกล้อง</button>
 
   <div class="manual">
-    <input id="manualCode" inputmode="text" autocomplete="off" placeholder="กรอกรหัส เช่น OY001 / LT001">
-    <button type="button" onclick="submitManual()">ค้นหา</button>
+    <input id="manualCode" type="text" autocomplete="off" placeholder="กรอกรหัส OY001 / LT001">
+    <button type="button" onclick="useManualCode()">ไป</button>
   </div>
 
-  <div class="hint">QR Code บนบัตรต้องมีเพียงรหัสสมาชิก เช่น OY001 หรือ LT001 ระบบจะเปิดฟอร์มตรวจสอบข้อมูลให้อัตโนมัติ</div>
+  <div class="small">วาง QR ให้อยู่กลางกรอบ ไม่ต้องนำโทรศัพท์เข้าใกล้บัตรมาก กล้องจะพยายามโฟกัสด้านหลังอัตโนมัติ</div>
 </div>
 
 <script>
@@ -58,135 +55,243 @@
   const params = new URLSearchParams(location.search);
   const RETURN_URL = (params.get('return') || DEFAULT_RETURN_URL).trim();
 
-  let reader = null;
-  let controls = null;
-  let busy = false;
-  let started = false;
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-  function setStatus(text, type='') {
-    const el = document.getElementById('status');
-    el.textContent = text;
-    el.className = 'status' + (type ? ' ' + type : '');
-  }
+  let stream = null;
+  let scanning = false;
+  let locked = false;
+  let scanTimer = null;
 
-  function normalizeCandidate(raw) {
-    // QR รุ่นใหม่เก็บเฉพาะรหัสสมาชิก เช่น OY001 / LT001
-    const text = String(raw || '')
-      .trim()
-      .toUpperCase()
-      .replace(/[\s\-_.\/]/g, '');
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('manualCode').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        useManualCode();
+      }
+    });
+    setTimeout(startCamera, 250);
+  });
 
-    // รับเฉพาะ OY + 3 หลัก หรือ LT + 3 หลัก
-    const match = text.match(/^(?:OY|LT)\d{3}$/);
-    return match ? match[0] : '';
-  }
-
-  function goToMember(raw) {
-    if (busy) return;
-
-    const code = normalizeCandidate(raw);
-    if (!code) {
-      setStatus('QR นี้ไม่ใช่รหัสสมาชิก กรุณาใช้ QR ที่มีค่า OY001 หรือ LT001', 'error');
-      return;
+  // Safari อาจคืนหน้า Scanner จาก back-forward cache
+  window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+      locked = false;
+      scanning = false;
+      setTimeout(startCamera, 200);
     }
+  });
 
-    busy = true;
-    setStatus('อ่านรหัสได้: ' + code + ' — กำลังเปิดแบบฟอร์ม…', 'ok');
+  async function startCamera() {
+    if (scanning) return;
 
-    try { if (controls) controls.stop(); } catch(e) {}
-    controls = null;
-    started = false;
-
-    const sep = RETURN_URL.includes('?') ? '&' : '?';
-    const target = RETURN_URL + sep + 'member=' + encodeURIComponent(code) + '&scan=' + Date.now();
-
-    // ใช้ replace เพื่อลดปัญหา Safari ย้อนกลับไปหน้า Scanner เก่าที่กล้องถูกหยุดไว้
-    setTimeout(() => {
-      window.location.replace(target);
-    }, 250);
-  }
-
-  async function startScanner() {
-    if (started && controls) return;
-    busy = false;
+    locked = false;
+    clearScanTimer();
+    document.getElementById('retryBtn').style.display = 'none';
     setStatus('กำลังเปิดกล้องหลัง…');
 
-    if (!window.ZXingBrowser) {
-      setStatus('โหลดตัวอ่านบาร์โค้ดไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วรีเฟรชหน้า', 'error');
+    if (!window.isSecureContext) {
+      showError('หน้านี้ต้องเปิดผ่าน HTTPS เท่านั้น');
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showError('เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง กรุณาเปิดด้วย Safari');
       return;
     }
 
-    try {
-      reader = new ZXingBrowser.BrowserQRCodeReader(undefined, {
-        delayBetweenScanAttempts: 120,
-        delayBetweenScanSuccess: 700
-      });
+    await stopCamera(true);
 
-      const video = document.getElementById('video');
-      controls = await reader.decodeFromVideoDevice(undefined, video, (result, error, ctl) => {
-        if (result && !busy) {
-          const raw = typeof result.getText === 'function' ? result.getText() : (result.text || String(result));
-          goToMember(raw);
-        }
-      });
-
-      started = true;
-      setStatus('พร้อมสแกน — เล็ง QR Code ให้อยู่ในกรอบ', 'ok');
-    } catch (err) {
-      started = false;
-      controls = null;
-      let msg = err && err.message ? err.message : String(err || 'ไม่ทราบสาเหตุ');
-      setStatus('เปิดกล้องไม่สำเร็จ: ' + msg, 'error');
-    }
-  }
-
-  function stopScanner() {
-    try { if (controls) controls.stop(); } catch(e) {}
-    controls = null;
-    started = false;
-    const video = document.getElementById('video');
-    try {
-      if (video.srcObject) {
-        video.srcObject.getTracks().forEach(t => t.stop());
-        video.srcObject = null;
+    const constraints = {
+      audio: false,
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
       }
-    } catch(e) {}
-    setStatus('หยุดกล้องแล้ว');
-  }
+    };
 
-  function submitManual() {
-    const v = document.getElementById('manualCode').value;
-    if (!String(v || '').trim()) {
-      setStatus('กรุณากรอกรหัสสมาชิกก่อน', 'error');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err1) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:'environment'}});
+      } catch (err2) {
+        showError(cameraErrorText(err2 || err1));
+        return;
+      }
+    }
+
+    try {
+      const track = stream.getVideoTracks()[0];
+      if (track && track.getCapabilities && track.applyConstraints) {
+        const caps = track.getCapabilities();
+        const advanced = [];
+        if (caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
+          advanced.push({ focusMode: 'continuous' });
+        }
+        if (advanced.length) {
+          try { await track.applyConstraints({ advanced: advanced }); } catch(e) {}
+        }
+      }
+
+      video.srcObject = stream;
+      await video.play();
+    } catch (err) {
+      showError('เปิดภาพจากกล้องไม่สำเร็จ: ' + getMessage(err));
       return;
     }
-    goToMember(v);
+
+    scanning = true;
+    document.getElementById('stopBtn').style.display = 'block';
+    setStatus('พร้อมสแกน — วาง QR ให้อยู่กลางกรอบ', 'ok');
+    scheduleScan(120);
   }
 
-  document.getElementById('manualCode').addEventListener('keydown', e => {
-    if (e.key === 'Enter') submitManual();
-  });
-
-  function restartScannerPage() {
-    busy = false;
-
-    // ถ้ากล้องเดิมยังค้างอยู่ให้หยุดก่อน แล้วเริ่มใหม่
-    try { if (controls) controls.stop(); } catch(e) {}
-    controls = null;
-    started = false;
-
-    setTimeout(startScanner, 250);
+  async function stopCamera(silent) {
+    scanning = false;
+    clearScanTimer();
+    if (stream) {
+      stream.getTracks().forEach(function(track){ try { track.stop(); } catch(e) {} });
+      stream = null;
+    }
+    video.srcObject = null;
+    document.getElementById('stopBtn').style.display = 'none';
+    if (!silent) {
+      document.getElementById('retryBtn').style.display = 'block';
+      setStatus('หยุดกล้องแล้ว');
+    }
   }
 
-  window.addEventListener('load', restartScannerPage);
+  function clearScanTimer() {
+    if (scanTimer) {
+      clearTimeout(scanTimer);
+      scanTimer = null;
+    }
+  }
 
-  // Safari อาจคืนหน้าเดิมจาก Back/Forward Cache
-  // จึงสั่งเริ่มกล้องใหม่ทุกครั้งที่หน้า Scanner กลับมาแสดง
-  window.addEventListener('pageshow', function(event) {
-    if (event.persisted) restartScannerPage();
-  });
+  function scheduleScan(delay) {
+    clearScanTimer();
+    if (!scanning || locked) return;
+    scanTimer = setTimeout(scanFrame, delay || 100);
+  }
 
-  window.addEventListener('pagehide', stopScanner);
+  function scanFrame() {
+    if (!scanning || locked) return;
+
+    if (!window.jsQR) {
+      showError('โหลดตัวอ่าน QR ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วรีเฟรชหน้า');
+      return;
+    }
+
+    if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+      scheduleScan(120);
+      return;
+    }
+
+    // ใช้ภาพความละเอียดจริงจากกล้อง ไม่ย่อภาพก่อนอ่าน QR
+    // ตัดเฉพาะบริเวณกึ่งกลางเพื่อลดภาระและเพิ่มโอกาสอ่าน QR ขนาดเล็ก
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const cropSize = Math.floor(Math.min(vw, vh) * 0.84);
+    const sx = Math.max(0, Math.floor((vw - cropSize) / 2));
+    const sy = Math.max(0, Math.floor((vh - cropSize) / 2));
+
+    canvas.width = cropSize;
+    canvas.height = cropSize;
+    ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, cropSize, cropSize);
+
+    try {
+      const imageData = ctx.getImageData(0, 0, cropSize, cropSize);
+      let result = jsQR(imageData.data, cropSize, cropSize, { inversionAttempts: 'dontInvert' });
+
+      if (!result) {
+        result = jsQR(imageData.data, cropSize, cropSize, { inversionAttempts: 'attemptBoth' });
+      }
+
+      if (result && result.data) {
+        handleDecoded(result.data);
+        return;
+      }
+    } catch (e) {
+      // อ่านเฟรมถัดไปต่อ ไม่หยุดกล้อง
+    }
+
+    scheduleScan(100);
+  }
+
+  function handleDecoded(raw) {
+    if (locked) return;
+    const code = normalizeMemberCode(raw);
+
+    if (!code) {
+      setStatus('อ่าน QR ได้ แต่ไม่ใช่รหัสสมาชิก OY/LT', 'warn');
+      scheduleScan(500);
+      return;
+    }
+
+    locked = true;
+    setStatus('อ่านรหัสได้: ' + code + ' — กำลังเปิดแบบฟอร์ม…', 'ok');
+    stopCamera(true).finally(function() {
+      setTimeout(function(){ redirectToForm(code); }, 120);
+    });
+  }
+
+  function normalizeMemberCode(raw) {
+    let text = String(raw || '').trim().toUpperCase();
+    if (!text) return '';
+
+    // QR รุ่นใหม่ควรเป็น OY001 / LT001 โดยตรง
+    // ยังรองรับช่องว่างหรือขีดเผื่อกรอกด้วยมือ
+    text = text.replace(/[\s\-_.\/]/g, '');
+    const match = text.match(/^(OY|LT)(\d{1,6})$/);
+    if (!match) return '';
+
+    // ถ้าหมายเลขมีศูนย์นำหน้าอยู่แล้ว ให้คงไว้ตาม QR ต้นฉบับ
+    return match[1] + match[2];
+  }
+
+  function useManualCode() {
+    const code = normalizeMemberCode(document.getElementById('manualCode').value);
+    if (!code) {
+      showError('กรุณากรอกรหัสสมาชิก เช่น OY001 หรือ LT001');
+      return;
+    }
+    redirectToForm(code);
+  }
+
+  function redirectToForm(code) {
+    if (!RETURN_URL) {
+      locked = false;
+      showError('ยังไม่ได้กำหนด URL ของ Web App ปลายทาง');
+      return;
+    }
+    const sep = RETURN_URL.includes('?') ? '&' : '?';
+    window.location.href = RETURN_URL + sep + 'member=' + encodeURIComponent(code) + '&scan=' + Date.now();
+  }
+
+  function setStatus(message, type) {
+    const el = document.getElementById('status');
+    el.className = 'status' + (type ? ' ' + type : '');
+    el.textContent = message;
+  }
+
+  function showError(message) {
+    setStatus(message, 'err');
+    document.getElementById('retryBtn').style.display = 'block';
+  }
+
+  function getMessage(err) {
+    return (err && (err.message || err.name)) ? (err.message || err.name) : String(err || 'ไม่ทราบสาเหตุ');
+  }
+
+  function cameraErrorText(err) {
+    const text = ((err && err.name) || '') + ' ' + ((err && err.message) || '');
+    if (/NotAllowedError|Permission|denied/i.test(text)) return 'ยังไม่ได้อนุญาตให้ใช้กล้อง กรุณาอนุญาต Camera ใน Safari แล้วกดเปิดกล้องอีกครั้ง';
+    if (/NotFoundError|DevicesNotFound/i.test(text)) return 'ไม่พบกล้องในอุปกรณ์';
+    if (/NotReadableError|TrackStartError|AbortError/i.test(text)) return 'กล้องอาจถูกใช้งานโดยแอปอื่น กรุณาปิดแอปกล้องอื่นแล้วลองใหม่';
+    return 'เปิดกล้องไม่สำเร็จ: ' + getMessage(err);
+  }
 </script>
 </body>
 </html>
