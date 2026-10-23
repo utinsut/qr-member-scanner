@@ -50,7 +50,7 @@
     <button type="button" onclick="submitManual()">ค้นหา</button>
   </div>
 
-  <div class="hint">แนะนำให้ QR Code บนบัตรเก็บเฉพาะรหัสสมาชิก เช่น OY001 หรือ LT001 จะสแกนได้เร็ว และเปลี่ยน URL ของระบบภายหลังได้โดยไม่ต้องพิมพ์บัตรใหม่</div>
+  <div class="hint">QR Code บนบัตรต้องมีเพียงรหัสสมาชิก เช่น OY001 หรือ LT001 ระบบจะเปิดฟอร์มตรวจสอบข้อมูลให้อัตโนมัติ</div>
 </div>
 
 <script>
@@ -70,43 +70,40 @@
   }
 
   function normalizeCandidate(raw) {
-    let text = String(raw || '').trim();
-    if (!text) return '';
+    // QR รุ่นใหม่เก็บเฉพาะรหัสสมาชิก เช่น OY001 / LT001
+    const text = String(raw || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[\s\-_.\/]/g, '');
 
-    // กรณี QR เป็น URL ที่มี ?member=...
-    try {
-      const url = new URL(text);
-      const m = url.searchParams.get('member');
-      if (m) text = m;
-    } catch(e) {}
-
-    try { text = decodeURIComponent(text); } catch(e) {}
-    text = text.toUpperCase().trim();
-
-    const paramMatch = text.match(/(?:^|[?&\s])MEMBER\s*=\s*([^&#\s]+)/i);
-    if (paramMatch && paramMatch[1]) text = paramMatch[1];
-
-    // รองรับรหัสที่ใช้อยู่/เคยใช้ เช่น LT001, OY001, NKC001
-    const codeMatch = text.match(/(?:LT|OY|NKC)\s*[-_.\/]?\s*0*\d+/i);
-    if (codeMatch) return codeMatch[0].replace(/[\s\-_.\/]/g, '').toUpperCase();
-
-    // ถ้า Barcode เข้ารหัสข้อความอื่น ให้ส่งค่าที่อ่านได้ตรง ๆ ไปให้ Apps Script ตรวจสอบ
-    return text.replace(/\s+/g, '');
+    // รับเฉพาะ OY + 3 หลัก หรือ LT + 3 หลัก
+    const match = text.match(/^(?:OY|LT)\d{3}$/);
+    return match ? match[0] : '';
   }
 
   function goToMember(raw) {
     if (busy) return;
+
     const code = normalizeCandidate(raw);
-    if (!code) return;
+    if (!code) {
+      setStatus('QR นี้ไม่ใช่รหัสสมาชิก กรุณาใช้ QR ที่มีค่า OY001 หรือ LT001', 'error');
+      return;
+    }
 
     busy = true;
     setStatus('อ่านรหัสได้: ' + code + ' — กำลังเปิดแบบฟอร์ม…', 'ok');
+
     try { if (controls) controls.stop(); } catch(e) {}
+    controls = null;
+    started = false;
 
     const sep = RETURN_URL.includes('?') ? '&' : '?';
+    const target = RETURN_URL + sep + 'member=' + encodeURIComponent(code) + '&scan=' + Date.now();
+
+    // ใช้ replace เพื่อลดปัญหา Safari ย้อนกลับไปหน้า Scanner เก่าที่กล้องถูกหยุดไว้
     setTimeout(() => {
-      window.location.href = RETURN_URL + sep + 'member=' + encodeURIComponent(code);
-    }, 350);
+      window.location.replace(target);
+    }, 250);
   }
 
   async function startScanner() {
@@ -170,9 +167,25 @@
     if (e.key === 'Enter') submitManual();
   });
 
-  window.addEventListener('load', () => {
-    setTimeout(startScanner, 300);
+  function restartScannerPage() {
+    busy = false;
+
+    // ถ้ากล้องเดิมยังค้างอยู่ให้หยุดก่อน แล้วเริ่มใหม่
+    try { if (controls) controls.stop(); } catch(e) {}
+    controls = null;
+    started = false;
+
+    setTimeout(startScanner, 250);
+  }
+
+  window.addEventListener('load', restartScannerPage);
+
+  // Safari อาจคืนหน้าเดิมจาก Back/Forward Cache
+  // จึงสั่งเริ่มกล้องใหม่ทุกครั้งที่หน้า Scanner กลับมาแสดง
+  window.addEventListener('pageshow', function(event) {
+    if (event.persisted) restartScannerPage();
   });
+
   window.addEventListener('pagehide', stopScanner);
 </script>
 </body>
